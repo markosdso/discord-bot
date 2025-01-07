@@ -1,6 +1,7 @@
 const { ApplicationCommandOptionType } = require('discord.js');
 const { EmbedBuilder } = require('discord.js');
 const Rollercoaster = require('../../models/rollercoaster');
+const Sequelize = require('sequelize');
 
 module.exports = {
     name: 'coaster',
@@ -8,22 +9,50 @@ module.exports = {
     options: [
         {
             name: 'name',
-            description: 'rollercoaster name',
+            description: 'rollercoaster and park name',
             type: ApplicationCommandOptionType.String,
-            required: true
+            required: true,
+            autocomplete: true,
         },
-        {
-            name: 'park',
-            description: 'amusement park',
-            type: ApplicationCommandOptionType.String,
-            required: true
-        }
     ],
+
+    autocomplete: async (client, interaction) => {
+        try {
+            const focusedValue = interaction.options.getFocused();
+
+            const filteredChoices = await Rollercoaster.findAll({
+                attributes: ['name', 'park'],
+                limit: 5,
+                where: {
+                    name: {
+                        [Sequelize.Op.like]: focusedValue + "%",
+                    }
+                }
+            });
+
+            const results = filteredChoices.map((choice) => {
+                return {
+                    name: `${choice.name}, ${choice.park}`,
+                    value: `${choice.name}, ${choice.park}`
+                }
+            });
+
+            interaction.respond(results).catch(() => {});
+
+
+
+        } catch (error) {
+            console.log(`ERROR: ${error}`);
+        }
+    },
 
     callback: async (client, interaction) => {
         try {
-            const name = interaction.options.get('name').value;
-            const park = interaction.options.get('park').value;
+            const composite = interaction.options.get('name').value;
+
+            const split = composite.split(", ");
+            const name = split[0];
+            const park = split[1];
     
             const rollercoaster = await Rollercoaster.findOne({ 
                 where: { 
