@@ -1,0 +1,80 @@
+const { ApplicationCommandOptionType } = require('discord.js');
+const { EmbedBuilder } = require('discord.js');
+const Rollercoaster = require('../../models/rollercoaster');
+const User = require('../../models/user');
+const Ranking = require('../../models/ranking');
+
+module.exports = {
+    name: 'append-rank',
+    description: 'add a coaster to the end of your rankings',
+    options: [
+        {
+            name: 'name',
+            description: 'rollercoaster name',
+            type: ApplicationCommandOptionType.String,
+            required: true
+        },
+        {
+            name: 'park',
+            description: 'amusement park',
+            type: ApplicationCommandOptionType.String,
+            required: true
+        },
+
+    ],
+
+    callback: async (client, interaction) => {
+        try {
+            const name = interaction.options.get('name').value;
+            const park = interaction.options.get('park').value;
+
+            const id = interaction.user.id;
+
+            const rollercoaster = await Rollercoaster.findOne({ 
+                where: { 
+                    name: name, 
+                    park: park,
+                } 
+            });
+
+            if (!rollercoaster) {
+                interaction.reply('Rollercoaster does not exist');
+                return;
+            }
+
+            const user = await User.findOne({ 
+                where: { 
+                    id: id
+                } 
+            });
+
+            if (!user) {
+                interaction.reply('User profile not registered');
+                return;
+            }
+
+            let rank = await Ranking.max('rank', { where: { id: id } } );
+            if(!rank) {
+                rank = 0
+            }
+            rank = rank + 1;
+
+            const ranking = await Ranking.create({
+                name: name,
+                park: park,
+                id: id,
+                rank: rank,
+            });
+
+            const embed = new EmbedBuilder()
+                .setColor('DarkOrange')
+                .setTitle(`${name} added as rank ${rank}`);
+
+            interaction.reply({ embeds: [embed]});
+            
+        } catch (error) {
+             interaction.reply(`ERROR: ${error}`);
+        }
+
+    }
+}

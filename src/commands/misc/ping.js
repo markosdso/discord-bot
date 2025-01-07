@@ -1,3 +1,5 @@
+const { InteractionCallback } = require("discord.js");
+
 module.exports = {
     name: 'ping',
     description: 'Pings calling user.',
